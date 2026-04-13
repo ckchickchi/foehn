@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>焚風模擬器 (Foehn Wind Simulator)</title>
+    <!-- 載入 Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 載入 React 與 Babel CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- 載入 Lucide 圖示 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Playfair+Display:ital,wght@0,900;1,900&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #E4E3E0;
+            color: #141414;
+        }
+        .font-serif { font-family: 'Playfair Display', serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: rgba(20, 20, 20, 0.1);
+            height: 2px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #141414;
+            cursor: pointer;
+            border-radius: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useRef, useEffect } = React;
+
+        // 物理常數
+        const DRY_LAPSE_RATE = 1.0; // 乾絕熱率 °C/100m
+        const WET_LAPSE_RATE = 0.6; // 濕絕熱率 °C/100m
+
+        function App() {
+            // 使用者設定
+            const [initialTemp, setInitialTemp] = useState(30);
+            const [initialDewPoint, setInitialDewPoint] = useState(20);
+            const [mountainHeight, setMountainHeight] = useState(2000);
+            const [progress, setProgress] = useState(0); // 0 到 2
+
+            const containerRef = useRef(null);
+
+            // 計算當前高度
+            const currentHeight = useMemo(() => {
+                return progress <= 1 ? progress * mountainHeight : (2 - progress) * mountainHeight;
+            }, [progress, mountainHeight]);
+
+            // 物理計算邏輯
+            const stats = useMemo(() => {
+                const lcl = Math.max(0, (initialTemp - initialDewPoint) * 100);
+                let temp, dewPoint, isSaturated = false;
+
+                if (progress <= 1) { // 上升階段
+                    const h = progress * mountainHeight;
+                    if (h <= lcl) {
+                        temp = initialTemp - (h / 100) * DRY_LAPSE_RATE;
+                        dewPoint = initialDewPoint;
+                        isSaturated = false;
+                    } else {
+                        const tempAtLcl = initialTemp - (lcl / 100) * DRY_LAPSE_RATE;
+                        temp = tempAtLcl - ((h - lcl) / 100) * WET_LAPSE_RATE;
+                        dewPoint = temp;
+                        isSaturated = true;
+                    }
+                } else { // 下降階段
+                    const peakH = mountainHeight;
+                    let peakTemp;
+                    if (peakH <= lcl) {
+                        peakTemp = initialTemp - (peakH / 100) * DRY_LAPSE_RATE;
+                    } else {
+                        const tempAtLcl = initialTemp - (lcl / 100) * DRY_LAPSE_RATE;
+                        peakTemp = tempAtLcl - ((peakH - lcl) / 100) * WET_LAPSE_RATE;
+                    }
+                    const h = (2 - progress) * mountainHeight;
+                    temp = peakTemp + ((peakH - h) / 100) * DRY_LAPSE_RATE;
+                    dewPoint = peakTemp + ((peakH - h) / 100) * 0.2; // 簡化下降時的露點變化
+                    isSaturated = false;
+                }
+
+                return {
+                    temp: temp.toFixed(1),
+                    dewPoint: dewPoint.toFixed(1),
+                    height: Math.round(currentHeight),
+                    isSaturated,
+                    lcl: Math.round(lcl)
+                };
+            }, [progress, initialTemp, initialDewPoint, mountainHeight, currentHeight]);
+
+            // 處理滑鼠/觸控移動
+            const handleMove = (e) => {
+                if (!containerRef.current) return;
+                const rect = containerRef.current.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                let newProgress = ((clientX - rect.left) / rect.width) * 2;
+                setProgress(Math.max(0, Math.min(2, newProgress)));
+            };
+
+            const [isDragging, setIsDragging] = useState(false);
+
+            return (
+                <div className="min-h-screen flex flex-col">
+                    {/* 標題欄 */}
+                    <header className="bg-white border-b border-black p-6 flex justify-between items-end">
+                        <div>
+                            <h1 className="text-4xl font-serif italic tracking-tighter">焚風模擬器</h1>
+                            <p className="text-[10px] uppercase font-bold tracking-widest opacity-40 mt-1">Standalone HTML Edition</p>
+                        </div>
+                        <button onClick={() => setProgress(0)} className="bg-black text-white px-4 py-2 text-xs font-bold uppercase tracking-widest hover:opacity-80">
+                            重置位置
+                        </button>
+                    </header>
+
+                    <main className="flex-grow grid grid-cols-1 lg:grid-cols-12">
+                        {/* 左側：模擬區 */}
+                        <div className="lg:col-span-8 p-8 border-r border-black flex flex-col gap-8">
+                            <div className="grid grid-cols-3 gap-8">
+                                <div>
+                                    <div className="flex justify-between text-[10px] font-bold uppercase opacity-40 mb-2">
+                                        <span>初始溫度 (T₀)</span>
+                                        <span className="font-mono text-black opacity-100">{initialTemp}°C</span>
+                                    </div>
+                                    <input type="range" min="0" max="50" value={initialTemp} onChange={e => setInitialTemp(Number(e.target.value))} className="w-full" />
+                                </div>
+                                <div>
+                                    <div className="flex justify-between text-[10px] font-bold uppercase opacity-40 mb-2">
+                                        <span>初始露點 (Td₀)</span>
+                                        <span className="font-mono text-black opacity-100">{initialDewPoint}°C</span>
+                                    </div>
+                                    <input type="range" min="0" max={initialTemp} value={initialDewPoint} onChange={e => setInitialDewPoint(Number(e.target.value))} className="w-full" />
+                                </div>
+                                <div>
+                                    <div className="flex justify-between text-[10px] font-bold uppercase opacity-40 mb-2">
+                                        <span>山脈高度 (H)</span>
+                                        <span className="font-mono text-black opacity-100">{mountainHeight}m</span>
+                                    </div>
+                                    <input type="range" min="500" max="4000" step="100" value={mountainHeight} onChange={e => setMountainHeight(Number(e.target.value))} className="w-full" />
+                                </div>
+                            </div>
+
+                            <div 
+                                ref={containerRef}
+                                className="flex-grow relative bg-white border border-black overflow-hidden cursor-crosshair"
+                                onMouseDown={() => setIsDragging(true)}
+                                onMouseUp={() => setIsDragging(false)}
+                                onMouseMove={(e) => isDragging && handleMove(e)}
+                                onTouchMove={handleMove}
+                            >
+                                {/* 網格線 */}
+                                <div className="absolute inset-0 opacity-[0.05]" style={{backgroundImage: 'linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '50px 50px'}}></div>
+                                
+                                <svg className="w-full h-full" viewBox="0 0 800 400" preserveAspectRatio="none">
+                                    <path d="M 0 400 L 400 50 L 800 400 Z" fill="#F0F0F0" stroke="black" strokeWidth="2" />
+                                    {stats.lcl < mountainHeight && (
+                                        <line x1="0" y1={400 - (stats.lcl / mountainHeight) * 350} x2="800" y2={400 - (stats.lcl / mountainHeight) * 350} stroke="black" strokeDasharray="5,5" opacity="0.2" />
+                                    )}
+                                </svg>
+
+                                {/* 空氣塊 */}
+                                <div 
+                                    className={`absolute w-12 h-12 border border-black flex items-center justify-center transition-colors duration-500 ${stats.isSaturated ? 'bg-black text-white' : 'bg-white text-black'}`}
+                                    style={{
+                                        left: `${(progress / 2) * 100}%`,
+                                        bottom: `${(stats.height / mountainHeight) * 87.5}%`,
+                                        transform: 'translate(-50%, 50%)'
+                                    }}
+                                >
+                                    <span className="text-[8px] font-black uppercase">Parcel</span>
+                                </div>
+
+                                <div className="absolute top-4 left-4 text-[10px] font-bold opacity-20 uppercase">迎風面 Ascent</div>
+                                <div className="absolute top-4 right-4 text-[10px] font-bold opacity-20 uppercase">背風面 Descent</div>
+                                {stats.lcl < mountainHeight && (
+                                    <div className="absolute text-[9px] font-mono opacity-30" style={{left: '10px', bottom: `${(stats.lcl / mountainHeight) * 87.5}%`}}>LCL: {stats.lcl}m</div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 右側：數據區 */}
+                        <div className="lg:col-span-4 p-8 bg-white flex flex-col gap-12">
+                            <div className="space-y-12">
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase opacity-40 mb-2">當前高度 Height</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-7xl font-mono tracking-tighter">{stats.height}</span>
+                                        <span className="text-xl font-serif italic opacity-40">m</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase opacity-40 mb-2">當前溫度 Temp</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-7xl font-mono tracking-tighter">{stats.temp}</span>
+                                        <span className="text-xl font-serif italic opacity-40">°C</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase opacity-40 mb-2">露點溫度 Dew Point</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-4xl font-mono tracking-tighter opacity-60">{stats.dewPoint}</span>
+                                        <span className="text-lg font-serif italic opacity-40">°C</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-auto border-t border-black pt-8 text-[11px] leading-relaxed opacity-60">
+                                <p className="mb-4"><b>物理原理：</b></p>
+                                <p>1. <b>未飽和：</b>每上升 100m 降溫 1.0°C。</p>
+                                <p>2. <b>飽和：</b>每上升 100m 降溫 0.6°C。</p>
+                                <p>3. <b>下降：</b>空氣變乾，每下降 100m 升溫 1.0°C。</p>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
