@@ -16,14 +16,14 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: #E4E3E0;
-            color: #141414;
+            color: #0044F0;
         }
         .font-serif { font-family: 'Playfair Display', serif; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         
         input[type="range"] {
             -webkit-appearance: none;
-            background: rgba(20, 20, 20, 0.1);
+            background: rgba(40, 140, 220, 0.55);
             height: 4px;
         }
         input[type="range"]::-webkit-slider-thumb {
@@ -170,7 +170,7 @@
                                         { label: '山脈高度 (H)', val: mountainHeight, unit: 'm', min: 500, max: 4000, set: setMountainHeight, step: 100 }
                                     ].map(ctrl => (
                                         <div key={ctrl.label}>
-                                            <div className="flex justify-between text-[14px] font-bold uppercase opacity-50 mb-2">
+                                            <div className="flex justify-between text-[16px] font-bold uppercase opacity-80 mb-2">
                                                 <span>{ctrl.label}</span>
                                                 <span className="font-mono text-black opacity-100">{ctrl.val}{ctrl.unit}</span>
                                             </div>
@@ -181,7 +181,7 @@
                                 
                                 {/* 露點變化開關 */}
                                 <div className="flex items-center justify-between pt-4 border-t border-black/5">
-                                    <span className="text-[14px] font-bold uppercase tracking-widest opacity-60">露點是否隨高度變化 (±0.2°C/100m)</span>
+                                    <span className="text-[14px] font-bold uppercase tracking-widest opacity-80">露點是否隨高度變化 (±0.2°C/100m)</span>
                                     <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
                                         <input 
                                             type="checkbox" 
@@ -209,7 +209,7 @@
                                 
                                 <svg className="w-full h-full" viewBox="0 0 800 450" preserveAspectRatio="none">
                                     <path d="M 0 400 L 100 400 L 400 50 L 700 400 L 800 400" fill="none" stroke="black" strokeWidth="2" />
-                                    <path d="M 0 400 L 100 400 L 400 50 L 700 400 L 800 400 L 800 450 L 0 450 Z" fill="#F0F0F0" />
+                                    <path d="M 0 400 L 100 400 L 400 50 L 700 400 L 800 400 L 800 450 L 0 450 Z" fill="#A2F0A2" />
                                     
                                     {stats.lcl < mountainHeight && (
                                         <line 
@@ -235,8 +235,8 @@
                                     <span className="text-[14px] font-bold opacity-60 uppercase">Parcel</span>
                                 </div>
 
-                                <div className="absolute top-6 left-6 text-[14px] font-black opacity-20 uppercase tracking-widest">迎風面 Windward</div>
-                                <div className="absolute top-6 right-6 text-[14px] font-black opacity-20 uppercase tracking-widest text-right">背風面 Leeward</div>
+                                <div className="absolute top-6 left-6 text-[14px] font-black opacity-50 uppercase tracking-widest">迎風面 Windward</div>
+                                <div className="absolute top-6 right-6 text-[14px] font-black opacity-50 uppercase tracking-widest text-right">背風面 Leeward</div>
                                 
                                 {stats.lcl < mountainHeight && (
                                     <div className="absolute text-[14px] font-mono font-bold opacity-30 bg-white/80 px-2" style={{left: '10px', bottom: `${((stats.lcl / mountainHeight) * 350 + 50) / 450 * 100}%`}}>
