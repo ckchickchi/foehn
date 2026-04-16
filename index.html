@@ -16,14 +16,14 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: #E4E3E0;
-            color: #0044F0; /* 恢復您的藍色配置 */
+            color: #0044F0;
         }
         .font-serif { font-family: 'Playfair Display', serif; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         
         input[type="range"] {
             -webkit-appearance: none;
-            background: rgba(40, 140, 220, 0.55); /* 恢復您的滑桿背景 */
+            background: rgba(40, 140, 220, 0.55);
             height: 4px;
         }
         input[type="range"]::-webkit-slider-thumb {
@@ -39,7 +39,6 @@
             touch-action: none;
         }
 
-        /* 自定義切換開關樣式 */
         .toggle-checkbox:checked {
             right: 0;
             border-color: #141414;
@@ -69,9 +68,9 @@
             const containerRef = useRef(null);
             const [isDragging, setIsDragging] = useState(false);
 
-            // 山脈高度參考值：地平線 400，山頂 125 (縮小後的高度)
-            const PEAK_Y = 125;
-            const BASE_Y = 400;
+            // 山脈高度參考值：地平線 360，山頂 85 (再向上移動 20 單位後的座標)
+            const PEAK_Y = 85;
+            const BASE_Y = 360;
             const VISUAL_HT = BASE_Y - PEAK_Y;
 
             const stats = useMemo(() => {
@@ -139,7 +138,6 @@
             const onMouseMove = (e) => { if (isDragging) handleMove(e.clientX); };
             const onMouseUp = () => setIsDragging(false);
 
-            // 統一數字格式的組件
             const DataRow = ({ label, value, unit }) => (
                 <div className="group">
                     <p className="text-[14px] font-black uppercase tracking-widest opacity-40 mb-2">{label}</p>
@@ -209,9 +207,9 @@
                                 <div className="absolute inset-0 opacity-[0.03]" style={{backgroundImage: 'linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '40px 40px'}}></div>
                                 
                                 <svg className="w-full h-full" viewBox="0 0 800 450" preserveAspectRatio="none">
-                                    {/* 縮小高度後的山脈地形：山頂位置設為 PEAK_Y */}
-                                    <path d={`M 0 400 L 100 400 L 400 ${PEAK_Y} L 700 400 L 800 400`} fill="none" stroke="black" strokeWidth="2" />
-                                    <path d={`M 0 400 L 100 400 L 400 ${PEAK_Y} L 700 400 L 800 400 L 800 450 L 0 450 Z`} fill="#A2F0A2" />
+                                    {/* 山脈地形：地平線設為 BASE_Y (360)，山頂設為 PEAK_Y (85) */}
+                                    <path d={`M 0 ${BASE_Y} L 100 ${BASE_Y} L 400 ${PEAK_Y} L 700 ${BASE_Y} L 800 ${BASE_Y}`} fill="none" stroke="black" strokeWidth="2" />
+                                    <path d={`M 0 ${BASE_Y} L 100 ${BASE_Y} L 400 ${PEAK_Y} L 700 ${BASE_Y} L 800 ${BASE_Y} L 800 450 L 0 450 Z`} fill="#A2F0A2" />
                                     
                                     {stats.lcl < mountainHeight && (
                                         <line 
@@ -226,7 +224,7 @@
                                     className={`absolute w-20 h-20 rounded-full border-2 border-black flex flex-col items-center justify-center transition-colors duration-300 shadow-xl ${stats.isSaturated ? 'bg-black text-white' : 'bg-white text-black'}`}
                                     style={{
                                         left: `${progress <= 1 ? (100 + progress * 300) / 800 * 100 : (400 + (progress - 1) * 300) / 800 * 100}%`,
-                                        bottom: `${((stats.height / mountainHeight) * VISUAL_HT + 50) / 450 * 100}%`,
+                                        bottom: `${((stats.height / mountainHeight) * VISUAL_HT + (450 - BASE_Y)) / 450 * 100}%`,
                                         transform: 'translate(-50%, 50%)',
                                         pointerEvents: 'none'
                                     }}
@@ -240,7 +238,7 @@
                                 <div className="absolute top-6 right-6 text-[14px] font-black opacity-50 uppercase tracking-widest text-right">背風面 Leeward</div>
                                 
                                 {stats.lcl < mountainHeight && (
-                                    <div className="absolute text-[14px] font-mono font-bold opacity-30 bg-white/80 px-2" style={{left: '10px', bottom: `${((stats.lcl / mountainHeight) * VISUAL_HT + 50) / 450 * 100}%`}}>
+                                    <div className="absolute text-[14px] font-mono font-bold opacity-30 bg-white/80 px-2" style={{left: '10px', bottom: `${((stats.lcl / mountainHeight) * VISUAL_HT + (450 - BASE_Y)) / 450 * 100}%`}}>
                                         LCL: {stats.lcl}m
                                     </div>
                                 )}
@@ -249,7 +247,6 @@
 
                         {/* 右側：數據分析區 */}
                         <div className="lg:col-span-5 p-8 bg-white flex flex-col gap-8 relative">
-                            {/* 重置按鈕移動至此 */}
                             <button 
                                 onClick={() => setProgress(0)} 
                                 className="absolute right-8 top-8 bg-black text-white px-4 py-2 text-[14px] font-bold uppercase tracking-widest hover:bg-gray-800 transition-all shadow-md active:scale-95 z-20"
